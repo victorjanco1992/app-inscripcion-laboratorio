@@ -1,19 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { LogIn, LogOut, FileText, Lock, Unlock, UserPlus, Trash2, AlertCircle, CheckCircle, X, Plus, Download, Bell, User } from 'lucide-react';
 
-//const API_URL = 'http://localhost:3000/api';
-const API_URL = import.meta.env.VITE_API_URL
+// Configuración de API
+// IMPORTANTE: En tu proyecto real, cambia esto por:
+// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = 'http://localhost:3000/api';
 
 export default function LabInscriptionsApp() {
   const [view, setView] = useState('home');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    // Verificar si hay una sesión de admin guardada
+    return sessionStorage.getItem('isAdminAuthenticated') === 'true';
+  });
+  
+  const handleSetIsAdmin = (value) => {
+    setIsAdmin(value);
+    if (value) {
+      sessionStorage.setItem('isAdminAuthenticated', 'true');
+    } else {
+      sessionStorage.removeItem('isAdminAuthenticated');
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {!isAdmin ? (
-        <PublicView view={view} setView={setView} setIsAdmin={setIsAdmin} />
+        <PublicView view={view} setView={setView} setIsAdmin={handleSetIsAdmin} />
       ) : (
-        <AdminPanel setIsAdmin={setIsAdmin} />
+        <AdminPanel setIsAdmin={handleSetIsAdmin} />
       )}
     </div>
   );
