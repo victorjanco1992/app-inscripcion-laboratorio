@@ -49,7 +49,19 @@ const pool = new Pool({
 
 // ==================== CONFIGURACIÓN DE RESEND ====================
 
-const resend = new ResendClient(process.env.RESEND_API_KEY);
+// Inicializar Resend con verificación
+let resend;
+try {
+  const ResendClient = require('resend').Resend;
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY no está configurada. Los emails no se enviarán.');
+  } else {
+    resend = new ResendClient(process.env.RESEND_API_KEY);
+    console.log('✅ Resend configurado correctamente');
+  }
+} catch (error) {
+  console.error('❌ Error al inicializar Resend:', error.message);
+}
 
 // ==================== FUNCIONES AUXILIARES ====================
 
@@ -103,6 +115,12 @@ async function fechaBloqueada(fecha) {
 }
 
 async function enviarEmailAlumno(datos, codigo) {
+  // Si no hay resend configurado, solo hacer log
+  if (!resend) {
+    console.log('📧 Email no enviado (Resend no configurado):', datos.email);
+    return;
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: 'Laboratorio <onboarding@resend.dev>',
