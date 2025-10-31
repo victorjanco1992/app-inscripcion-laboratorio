@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { LogIn, LogOut, FileText, Lock, Unlock, UserPlus, Trash2, AlertCircle, CheckCircle, X, Plus, Download, Bell, User } from 'lucide-react';
 
-const API_URL = 'http://localhost:3000/api';
+//const API_URL = 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL
 
 export default function LabInscriptionsApp() {
   const [view, setView] = useState('home');
