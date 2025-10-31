@@ -2,7 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const Resend = require('resend');
+const ResendClient = require('resend');
 const PDFDocument = require('pdfkit');
 require('dotenv').config();
 
@@ -49,7 +49,7 @@ const pool = new Pool({
 
 // ==================== CONFIGURACIÓN DE RESEND ====================
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new ResendClient(process.env.RESEND_API_KEY);
 
 // ==================== FUNCIONES AUXILIARES ====================
 
