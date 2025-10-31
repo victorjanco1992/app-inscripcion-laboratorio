@@ -15,6 +15,34 @@ app.use(cors({
 }));
 
 app.use(express.json());
+// ==================== RUTAS DE HEALTH CHECK ====================
+
+// Health check para UptimeRobot y monitoreo
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    service: 'Lab Inscriptions API'
+  });
+});
+
+// Ruta raíz con información del API
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'API de Inscripciones a Laboratorio',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      inscripciones: '/api/inscripciones',
+      admin: '/api/admin',
+      docs: 'https://github.com/tu-usuario/lab-inscriptions'
+    }
+  });
+});
+
+// ==================== CONFIGURACIÓN DE BASE DE DATOS ====================
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
