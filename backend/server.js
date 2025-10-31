@@ -2,12 +2,12 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const nodemailer = require('nodemailer');
+const Resend = require('resend');
 const PDFDocument = require('pdfkit');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 1000;
+const PORT = process.env.PORT;
 
 app.use(cors({
   origin: 'https://app-inscripcion-laboratorio-frontend.onrender.com',
@@ -15,9 +15,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
 // ==================== RUTAS DE HEALTH CHECK ====================
 
-// Health check para UptimeRobot y monitoreo
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
@@ -27,7 +27,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Ruta raíz con información del API
 app.get('/', (req, res) => {
   res.status(200).json({ 
     message: 'API de Inscripciones a Laboratorio',
@@ -36,8 +35,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       inscripciones: '/api/inscripciones',
-      admin: '/api/admin',
-      docs: 'https://github.com/tu-usuario/lab-inscriptions'
+      admin: '/api/admin'
     }
   });
 });
@@ -49,15 +47,9 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+// ==================== CONFIGURACIÓN DE RESEND ====================
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ==================== FUNCIONES AUXILIARES ====================
 
@@ -112,9 +104,9 @@ async function fechaBloqueada(fecha) {
 
 async function enviarEmailAlumno(datos, codigo) {
   try {
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: datos.email,
+    const { data, error } = await resend.emails.send({
+      from: 'Laboratorio <onboarding@resend.dev>',
+      to: [datos.email],
       subject: '✅ Tu Inscripción al Laboratorio está Confirmada',
       html: `
         <!DOCTYPE html>
@@ -135,8 +127,7 @@ async function enviarEmailAlumno(datos, codigo) {
             .code-label { color: rgba(255,255,255,0.95); font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; font-weight: 600; }
             .code-box { background: white; padding: 25px; border-radius: 8px; margin: 15px 0; }
             .code { color: #667eea; font-size: 56px; font-weight: bold; letter-spacing: 12px; font-family: 'Courier New', monospace; margin: 0; line-height: 1; }
-            .code-warning { color: rgba(255,255,255,0.95); font-size: 14px; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-            .code-warning-icon { font-size: 20px; }
+            .code-warning { color: rgba(255,255,255,0.95); font-size: 14px; margin-top: 15px; }
             .details-section { background: #f9fafb; padding: 25px; border-radius: 12px; margin: 25px 0; }
             .details-title { color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 15px; text-align: center; }
             .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
@@ -144,9 +135,8 @@ async function enviarEmailAlumno(datos, codigo) {
             .detail-label { color: #6b7280; font-size: 14px; font-weight: 500; }
             .detail-value { color: #1f2937; font-size: 14px; font-weight: 600; }
             .instructions { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-top: 25px; }
-            .instructions-title { color: #92400e; font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-            .instructions-text { color: #92400e; font-size: 14px; line-height: 1.6; margin: 0; }
-            .instructions ul { margin: 10px 0; padding-left: 20px; }
+            .instructions-title { color: #92400e; font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+            .instructions ul { margin: 10px 0; padding-left: 20px; color: #92400e; }
             .instructions li { margin: 5px 0; }
             .footer { background: #f9fafb; padding: 25px; text-align: center; }
             .footer p { margin: 5px 0; color: #6b7280; font-size: 13px; }
@@ -175,8 +165,7 @@ async function enviarEmailAlumno(datos, codigo) {
                   <div class="code">${codigo}</div>
                 </div>
                 <div class="code-warning">
-                  <span class="code-warning-icon">⚠️</span>
-                  <span><strong>Importante:</strong> Guarda este código para cancelar si es necesario</span>
+                  <strong>⚠️ Importante:</strong> Guarda este código para cancelar si es necesario
                 </div>
               </div>
 
@@ -205,18 +194,13 @@ async function enviarEmailAlumno(datos, codigo) {
               </div>
 
               <div class="instructions">
-                <div class="instructions-title">
-                  <span>💡</span>
-                  <span>Instrucciones Importantes</span>
-                </div>
-                <div class="instructions-text">
-                  <ul>
-                    <li><strong>Llega puntual:</strong> Preséntate en el laboratorio a la hora indicada</li>
-                    <li><strong>Guarda tu código:</strong> El código <strong>${codigo}</strong> es necesario para cancelar tu inscripción</li>
-                    <li><strong>Para cancelar:</strong> Ingresa tu código en la sección "Cancelar Inscripción" del sistema</li>
-                    <li><strong>Consultas:</strong> Si tienes dudas, contacta al administrador del laboratorio</li>
-                  </ul>
-                </div>
+                <div class="instructions-title">💡 Instrucciones Importantes</div>
+                <ul>
+                  <li><strong>Llega puntual:</strong> Preséntate en el laboratorio a la hora indicada</li>
+                  <li><strong>Guarda tu código:</strong> El código <strong>${codigo}</strong> es necesario para cancelar tu inscripción</li>
+                  <li><strong>Para cancelar:</strong> Ingresa tu código en la sección "Cancelar Inscripción" del sistema</li>
+                  <li><strong>Consultas:</strong> Si tienes dudas, contacta al administrador del laboratorio</li>
+                </ul>
               </div>
 
               <div class="divider"></div>
@@ -236,8 +220,15 @@ async function enviarEmailAlumno(datos, codigo) {
         </html>
       `
     });
+
+    if (error) {
+      console.error('Error enviando email con Resend:', error);
+      return;
+    }
+
+    console.log('Email enviado exitosamente a:', datos.email, 'ID:', data.id);
   } catch (err) {
-    console.error('Error enviando email al alumno:', err);
+    console.error('Error en enviarEmailAlumno:', err);
   }
 }
 
@@ -282,14 +273,12 @@ async function initDB() {
       )
     `);
 
-    // Usar código de admin desde variable de entorno o default '1234'
     const codigoAdmin = process.env.ADMIN_PASSWORD || '1234';
     const adminExists = await client.query('SELECT id FROM configuracion_admin LIMIT 1');
     if (adminExists.rows.length === 0) {
       await client.query('INSERT INTO configuracion_admin (codigo_acceso) VALUES ($1)', [codigoAdmin]);
       console.log(`Código de admin configurado: ${codigoAdmin}`);
     } else {
-      // Actualizar el código si cambió en el .env
       await client.query('UPDATE configuracion_admin SET codigo_acceso = $1 WHERE id = 1', [codigoAdmin]);
       console.log(`Código de admin actualizado desde .env: ${codigoAdmin}`);
     }
@@ -382,7 +371,6 @@ app.post('/api/inscripciones', async (req, res) => {
     const cuposActuales = await contarCupos(fecha);
     const profesor = await esProfesor(email);
 
-    // Si es profesor, reserva todos los cupos
     if (profesor) {
       if (cuposActuales > 0) {
         return res.status(400).json({ error: 'Ya hay inscripciones para esta fecha' });
@@ -401,13 +389,11 @@ app.post('/api/inscripciones', async (req, res) => {
       return res.json({ message: 'Reserva completa realizada', codigo });
     }
 
-    // Validar: un alumno solo puede inscribirse 1 vez por día
     const inscripcionesExistentes = await contarInscripcionesPorEmail(email, fecha);
     if (inscripcionesExistentes > 0) {
       return res.status(400).json({ error: 'Ya tienes una inscripción para esta fecha' });
     }
 
-    // Inscripción normal
     if (cuposActuales >= 8) {
       return res.status(400).json({ error: 'No hay cupos disponibles para esta fecha' });
     }
@@ -433,7 +419,6 @@ app.delete('/api/inscripciones/:codigo', async (req, res) => {
   const { codigo } = req.params;
 
   try {
-    // Primero buscar la inscripción con ese código
     const inscripcion = await pool.query(
       'SELECT * FROM inscripciones WHERE codigo_inscripcion = $1',
       [codigo]
@@ -444,12 +429,9 @@ app.delete('/api/inscripciones/:codigo', async (req, res) => {
     }
 
     const datos = inscripcion.rows[0];
-    
-    // Verificar si es un profesor
     const profesor = await esProfesor(datos.email);
     
     if (profesor) {
-      // Si es profesor, eliminar todas sus inscripciones de esa fecha
       const result = await pool.query(
         'DELETE FROM inscripciones WHERE LOWER(email) = LOWER($1) AND fecha = $2 RETURNING *',
         [datos.email, datos.fecha]
@@ -461,14 +443,13 @@ app.delete('/api/inscripciones/:codigo', async (req, res) => {
         email: datos.email,
         fecha: datos.fecha,
         hora: datos.hora
-      }, profesor !== null);
+      }, true);
 
       return res.json({ 
         message: 'Inscripciones canceladas exitosamente',
         eliminadas: result.rows.length
       });
     } else {
-      // Si es alumno regular, solo eliminar su inscripción
       await pool.query(
         'DELETE FROM inscripciones WHERE codigo_inscripcion = $1',
         [codigo]
@@ -638,52 +619,6 @@ app.post('/api/admin/inscripciones', async (req, res) => {
   }
 });
 
-app.get('/api/admin/verificar-profesor', async (req, res) => {
-  const { email } = req.query;
-  try {
-    const profesor = await esProfesor(email);
-    res.json({ esProfesor: profesor !== null });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al verificar profesor' });
-  }
-});
-
-app.delete('/api/admin/inscripciones/profesor', async (req, res) => {
-  const { email, fecha } = req.query;
-
-  try {
-    // Verificar si es profesor antes de eliminar
-    const esProf = await esProfesor(email);
-    
-    const result = await pool.query(
-      'DELETE FROM inscripciones WHERE LOWER(email) = LOWER($1) AND fecha = $2 RETURNING *',
-      [email, fecha]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron inscripciones' });
-    }
-
-    const datos = result.rows[0];
-    await crearNotificacion('baja', {
-      nombre: datos.nombre,
-      apellido: datos.apellido,
-      email: datos.email,
-      fecha: datos.fecha,
-      hora: datos.hora
-    }, esProf !== null);
-
-    res.json({ 
-      message: `Se eliminaron ${result.rows.length} inscripciones del profesor`,
-      eliminadas: result.rows.length
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al eliminar inscripciones del profesor' });
-  }
-});
-
 app.delete('/api/admin/inscripciones/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -714,6 +649,40 @@ app.delete('/api/admin/inscripciones/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/admin/inscripciones/profesor', async (req, res) => {
+  const { email, fecha } = req.query;
+
+  try {
+    const esProf = await esProfesor(email);
+    
+    const result = await pool.query(
+      'DELETE FROM inscripciones WHERE LOWER(email) = LOWER($1) AND fecha = $2 RETURNING *',
+      [email, fecha]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No se encontraron inscripciones' });
+    }
+
+    const datos = result.rows[0];
+    await crearNotificacion('baja', {
+      nombre: datos.nombre,
+      apellido: datos.apellido,
+      email: datos.email,
+      fecha: datos.fecha,
+      hora: datos.hora
+    }, esProf !== null);
+
+    res.json({ 
+      message: `Se eliminaron ${result.rows.length} inscripciones del profesor`,
+      eliminadas: result.rows.length
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar inscripciones del profesor' });
+  }
+});
+
 app.get('/api/admin/reporte-pdf', async (req, res) => {
   const { fecha } = req.query;
 
@@ -732,7 +701,6 @@ app.get('/api/admin/reporte-pdf', async (req, res) => {
 
     doc.pipe(res);
 
-    // Header moderno
     doc.rect(0, 0, doc.page.width, 100).fill('#667eea');
     doc.fillColor('white')
        .fontSize(28)
@@ -744,7 +712,6 @@ app.get('/api/admin/reporte-pdf', async (req, res) => {
 
     doc.moveDown(3);
 
-    // Información general
     doc.fillColor('#4b5563')
        .fontSize(12)
        .text(`Total de inscripciones: ${result.rows.length}/8`, 50, 120);
@@ -752,7 +719,6 @@ app.get('/api/admin/reporte-pdf', async (req, res) => {
 
     doc.moveDown(2);
 
-    // Línea separadora
     doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(50, 180).lineTo(545, 180).stroke();
 
     let yPos = 200;
@@ -763,7 +729,6 @@ app.get('/api/admin/reporte-pdf', async (req, res) => {
         yPos = 50;
       }
 
-      // Card para cada inscripción
       doc.roundedRect(50, yPos, 495, 90, 5).fillAndStroke('#f9fafb', '#e5e7eb');
       
       doc.fillColor('#1f2937')
@@ -787,7 +752,6 @@ app.get('/api/admin/reporte-pdf', async (req, res) => {
       yPos += 105;
     });
 
-    // Footer
     const footerY = doc.page.height - 50;
     doc.fontSize(10)
        .fillColor('#9ca3af')
@@ -878,7 +842,10 @@ app.delete('/api/admin/profesores/:id', async (req, res) => {
 
 initDB().then(() => {
   app.listen(PORT, () => {
+    console.log(`========================================`);
     console.log(`Servidor corriendo en puerto ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`========================================`);
   });
 }).catch(err => {
   console.error('Error fatal al iniciar:', err);
