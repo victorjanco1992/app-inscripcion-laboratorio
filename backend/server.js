@@ -9,7 +9,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 1000;
 
-app.use(cors());
+app.use(cors({
+  origin: 'https://app-inscripcion-laboratorio-frontend.onrender.com',
+  credentials: true
+}));
+
 app.use(express.json());
 
 const pool = new Pool({
