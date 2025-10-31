@@ -3,8 +3,8 @@ import { LogIn, LogOut, FileText, Lock, Unlock, UserPlus, Trash2, AlertCircle, C
 
 // Configuración de API
 // IMPORTANTE: En tu proyecto real, cambia esto por:
-// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const API_URL = 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL;
+//const API_URL = 'http://localhost:3000/api';
 
 export default function LabInscriptionsApp() {
   const [view, setView] = useState('home');
