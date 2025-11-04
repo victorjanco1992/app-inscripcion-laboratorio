@@ -1,4 +1,4 @@
-// server.js - Backend completo actualizado con mejoras
+// server.js - Backend completo sin sistema de emails
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -6,13 +6,10 @@ const PDFDocument = require('pdfkit');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: 'https://app-inscripcion-laboratorio-frontend.onrender.com',
-  credentials: true
-}));
-
+// Middleware
+app.use(cors());
 app.use(express.json());
 
 // ==================== RUTAS DE HEALTH CHECK ====================
@@ -97,142 +94,6 @@ async function fechaBloqueada(fecha) {
   return result.rows.length > 0 ? result.rows[0] : null;
 }
 
-async function enviarEmailAlumno(datos, codigo) {
-  // Si no hay resend configurado, solo hacer log
-  if (!resend) {
-    console.log('📧 Email no enviado (Resend no configurado):', datos.email);
-    return;
-  }
-
-  try {
-    const { data, error } = await resend.emails.send({
-      from: 'Laboratorio <onboarding@resend.dev>',
-      to: [datos.email],
-      subject: '✅ Tu Inscripción al Laboratorio está Confirmada',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa; margin: 0; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }
-            .header h1 { color: white; margin: 0; font-size: 28px; font-weight: bold; }
-            .header p { color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; }
-            .content { padding: 40px 30px; }
-            .success-icon { width: 80px; height: 80px; background: #10b981; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-            .greeting { text-align: center; color: #1f2937; font-size: 18px; margin-bottom: 10px; }
-            .greeting strong { color: #667eea; font-size: 20px; }
-            .message { text-align: center; color: #6b7280; font-size: 15px; line-height: 1.6; margin-bottom: 30px; }
-            .code-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0; }
-            .code-label { color: rgba(255,255,255,0.95); font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; font-weight: 600; }
-            .code-box { background: white; padding: 25px; border-radius: 8px; margin: 15px 0; }
-            .code { color: #667eea; font-size: 56px; font-weight: bold; letter-spacing: 12px; font-family: 'Courier New', monospace; margin: 0; line-height: 1; }
-            .code-warning { color: rgba(255,255,255,0.95); font-size: 14px; margin-top: 15px; }
-            .details-section { background: #f9fafb; padding: 25px; border-radius: 12px; margin: 25px 0; }
-            .details-title { color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 15px; text-align: center; }
-            .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
-            .detail-row:last-child { border-bottom: none; }
-            .detail-label { color: #6b7280; font-size: 14px; font-weight: 500; }
-            .detail-value { color: #1f2937; font-size: 14px; font-weight: 600; }
-            .instructions { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-top: 25px; }
-            .instructions-title { color: #92400e; font-size: 15px; font-weight: 600; margin-bottom: 10px; }
-            .instructions ul { margin: 10px 0; padding-left: 20px; color: #92400e; }
-            .instructions li { margin: 5px 0; }
-            .footer { background: #f9fafb; padding: 25px; text-align: center; }
-            .footer p { margin: 5px 0; color: #6b7280; font-size: 13px; }
-            .divider { height: 1px; background: #e5e7eb; margin: 25px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>✅ Inscripción Confirmada</h1>
-              <p>Tu lugar está reservado</p>
-            </div>
-            
-            <div class="content">
-              <div class="success-icon">✓</div>
-              
-              <p class="greeting">¡Hola <strong>${datos.nombre}</strong>!</p>
-              <p class="message">
-                Tu inscripción al laboratorio ha sido <strong>confirmada exitosamente</strong>.<br>
-                Hemos reservado tu lugar para la fecha y hora que seleccionaste.
-              </p>
-
-              <div class="code-section">
-                <div class="code-label">Tu Código de Inscripción</div>
-                <div class="code-box">
-                  <div class="code">${codigo}</div>
-                </div>
-                <div class="code-warning">
-                  <strong>⚠️ Importante:</strong> Guarda este código para cancelar si es necesario
-                </div>
-              </div>
-
-              <div class="details-section">
-                <div class="details-title">📋 Detalles de tu Reserva</div>
-                <div class="detail-row">
-                  <span class="detail-label">📅 Fecha</span>
-                  <span class="detail-value">${new Date(datos.fecha).toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">🕐 Hora</span>
-                  <span class="detail-value">${datos.hora} hs</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">👤 Nombre Completo</span>
-                  <span class="detail-value">${datos.nombre} ${datos.apellido}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">📚 Año</span>
-                  <span class="detail-value">${datos.anio}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">📧 Email</span>
-                  <span class="detail-value">${datos.email}</span>
-                </div>
-              </div>
-
-              <div class="instructions">
-                <div class="instructions-title">💡 Instrucciones Importantes</div>
-                <ul>
-                  <li><strong>Llega puntual:</strong> Preséntate en el laboratorio a la hora indicada</li>
-                  <li><strong>Guarda tu código:</strong> El código <strong>${codigo}</strong> es necesario para cancelar tu inscripción</li>
-                  <li><strong>Para cancelar:</strong> Ingresa tu código en la sección "Cancelar Inscripción" del sistema</li>
-                  <li><strong>Consultas:</strong> Si tienes dudas, contacta al administrador del laboratorio</li>
-                </ul>
-              </div>
-
-              <div class="divider"></div>
-
-              <p style="text-align: center; color: #6b7280; font-size: 14px; margin: 20px 0;">
-                ¡Te esperamos en el laboratorio! 🔬
-              </p>
-            </div>
-            
-            <div class="footer">
-              <p style="font-weight: 600; color: #4b5563;">Sistema de Gestión de Inscripciones</p>
-              <p>Laboratorio Académico</p>
-              <p style="margin-top: 15px; font-size: 12px;">© ${new Date().getFullYear()} - Este es un correo automático, no responder</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `
-    });
-
-    if (error) {
-      console.error('Error enviando email con Resend:', error);
-      return;
-    }
-
-    console.log('Email enviado exitosamente a:', datos.email, 'ID:', data.id);
-  } catch (err) {
-    console.error('Error en enviarEmailAlumno:', err);
-  }
-}
-
 async function crearNotificacion(tipo, datos, esProfesor = false) {
   try {
     await pool.query(
@@ -240,8 +101,9 @@ async function crearNotificacion(tipo, datos, esProfesor = false) {
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [tipo, datos.nombre, datos.apellido, datos.email, datos.fecha, datos.hora, esProfesor]
     );
+    console.log(`✅ Notificación creada: ${tipo} - ${datos.email}`);
   } catch (err) {
-    console.error('Error creando notificación:', err);
+    console.error('❌ Error creando notificación:', err);
   }
 }
 
@@ -360,12 +222,16 @@ app.post('/api/inscripciones', async (req, res) => {
   const { nombre, apellido, email, anio, fecha, hora } = req.body;
 
   try {
+    console.log('📝 Nueva inscripción:', { nombre, apellido, email, fecha, hora });
+
     if (!validarHora(hora)) {
+      console.log('❌ Hora inválida:', hora);
       return res.status(400).json({ error: 'La hora debe estar entre 18:40 y 22:00' });
     }
 
     const fechaBlock = await fechaBloqueada(fecha);
     if (fechaBlock) {
+      console.log('❌ Fecha bloqueada:', fecha);
       return res.status(400).json({ error: `Esta fecha está bloqueada: ${fechaBlock.motivo}` });
     }
 
@@ -373,6 +239,7 @@ app.post('/api/inscripciones', async (req, res) => {
     const profesor = await esProfesor(email);
 
     if (profesor) {
+      console.log('👨‍🏫 Inscripción de profesor:', email);
       if (cuposActuales > 0) {
         return res.status(400).json({ error: 'Ya hay inscripciones para esta fecha' });
       }
@@ -385,17 +252,19 @@ app.post('/api/inscripciones', async (req, res) => {
           [profesor.nombre, apellido, email, anio, fecha, hora, codigoTemp]
         );
       }
-      await enviarEmailAlumno({ nombre: profesor.nombre, apellido, email, anio, fecha, hora }, codigo);
       await crearNotificacion('nueva', { nombre: profesor.nombre, apellido, email, fecha, hora }, true);
+      console.log('✅ Reserva completa de profesor creada');
       return res.json({ message: 'Reserva completa realizada', codigo });
     }
 
     const inscripcionesExistentes = await contarInscripcionesPorEmail(email, fecha);
     if (inscripcionesExistentes > 0) {
+      console.log('❌ Email ya inscrito:', email);
       return res.status(400).json({ error: 'Ya tienes una inscripción para esta fecha' });
     }
 
     if (cuposActuales >= 8) {
+      console.log('❌ Sin cupos disponibles para:', fecha);
       return res.status(400).json({ error: 'No hay cupos disponibles para esta fecha' });
     }
 
@@ -406,12 +275,12 @@ app.post('/api/inscripciones', async (req, res) => {
       [nombre, apellido, email, anio, fecha, hora, codigo]
     );
 
-    await enviarEmailAlumno({ nombre, apellido, email, anio, fecha, hora }, codigo);
     await crearNotificacion('nueva', { nombre, apellido, email, fecha, hora });
+    console.log('✅ Inscripción creada exitosamente:', codigo);
 
     res.json({ message: 'Inscripción exitosa', codigo });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error al procesar inscripción:', err);
     res.status(500).json({ error: 'Error al procesar la inscripción' });
   }
 });
@@ -589,7 +458,6 @@ app.post('/api/admin/inscripciones', async (req, res) => {
           [profesor.nombre, apellido, email, anio, fecha, hora, codigoTemp]
         );
       }
-      await enviarEmailAlumno({ nombre: profesor.nombre, apellido, email, anio, fecha, hora }, codigo);
       await crearNotificacion('nueva', { nombre: profesor.nombre, apellido, email, fecha, hora }, true);
       return res.json({ message: 'Reserva completa realizada', codigo });
     }
@@ -610,7 +478,6 @@ app.post('/api/admin/inscripciones', async (req, res) => {
       [nombre, apellido, email, anio, fecha, hora, codigo]
     );
 
-    await enviarEmailAlumno({ nombre, apellido, email, anio, fecha, hora }, codigo);
     await crearNotificacion('nueva', { nombre, apellido, email, fecha, hora });
 
     res.json({ message: 'Inscripción registrada', codigo });
