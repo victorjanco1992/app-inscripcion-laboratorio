@@ -164,9 +164,30 @@ function RegisterForm({ setView }) {
           </div>
           <div className="space-y-3">
             <p className="text-gray-700">Hola <span className="font-semibold text-green-700">{message.nombre}</span>, tu inscripción ha sido confirmada.</p>
-            <div className="bg-white rounded-lg p-4 border border-green-200">
+            <div className="bg-white rounded-lg p-4 border-2 border-green-300">
               <p className="text-sm text-gray-600 mb-2">Tu código de inscripción:</p>
-              <p className="text-3xl font-mono font-bold text-indigo-600 tracking-wider">{message.codigo}</p>
+              <div className="flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg">
+                <p className="text-4xl font-mono font-bold text-indigo-600 tracking-wider">{message.codigo}</p>
+                <button
+                  onClick={() => copiarCodigo(message.codigo)}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  title="Copiar código"
+                >
+                  {codigoCopied ? (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      ¡Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copiar
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-white rounded-lg p-3 border border-gray-200">
@@ -178,9 +199,11 @@ function RegisterForm({ setView }) {
                 <p className="font-semibold text-gray-800">{message.hora}</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mt-4">
-              💡 <span className="font-medium">Guarda este código</span> para cancelar tu inscripción si es necesario.
-            </p>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+              <p className="text-sm text-yellow-800">
+                <strong>💡 Importante:</strong> Guarda este código o toma una captura de pantalla. Lo necesitarás para cancelar tu inscripción si es necesario.
+              </p>
+            </div>
           </div>
         </div>
       )}
