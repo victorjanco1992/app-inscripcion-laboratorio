@@ -2,7 +2,6 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const ResendClient = require('resend');
 const PDFDocument = require('pdfkit');
 require('dotenv').config();
 
@@ -46,22 +45,6 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
-
-// ==================== CONFIGURACIÓN DE RESEND ====================
-
-// Inicializar Resend con verificación
-let resend;
-try {
-  const ResendClient = require('resend').Resend;
-  if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY no está configurada. Los emails no se enviarán.');
-  } else {
-    resend = new ResendClient(process.env.RESEND_API_KEY);
-    console.log('✅ Resend configurado correctamente');
-  }
-} catch (error) {
-  console.error('❌ Error al inicializar Resend:', error.message);
-}
 
 // ==================== FUNCIONES AUXILIARES ====================
 
