@@ -94,6 +94,13 @@ function RegisterForm({ setView }) {
   });
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [codigoCopied, setCodigoCopied] = useState(false);
+
+  const copiarCodigo = (codigo) => {
+    navigator.clipboard.writeText(codigo);
+    setCodigoCopied(true);
+    setTimeout(() => setCodigoCopied(false), 2000);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
